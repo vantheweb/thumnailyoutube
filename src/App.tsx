@@ -70,8 +70,20 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Initial Auth Sync
+  // Initial Auth Sync & Health Check
   useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) console.warn('Backend returned non-ok status');
+      } catch (e) {
+        console.error('Backend unreachable:', e);
+        setError('Không thể kết nối với máy chủ. Vui lòng thử lại sau.');
+      }
+    };
+    
+    checkBackend();
+
     const savedUser = localStorage.getItem('user');
     const savedToken = localStorage.getItem('token');
     if (savedUser && savedToken) {
@@ -111,6 +123,13 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+      
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Server returned non-JSON response. Check if backend is running. Status: ${res.status}`);
+      }
+
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
 
@@ -139,6 +158,12 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server error: Backend returned non-JSON. (Status ${res.status})`);
+      }
+
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       

@@ -34,8 +34,17 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Logging middleware
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+  });
+
   const getDB = () => JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
   const saveDB = (data: any) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+
+  // Health check
+  app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
   // --- API Routes ---
 
@@ -128,6 +137,11 @@ async function startServer() {
     }
   });
 
+  // API 404 handler
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -144,7 +158,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`[SERVER] API & Vite running on http://localhost:${PORT}`);
   });
 }
 

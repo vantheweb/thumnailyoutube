@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { OAuth2Client } from 'google-auth-library';
 
 dotenv.config();
 
@@ -15,6 +16,9 @@ const __dirname = path.dirname(__filename);
 const DB_FILE = path.join(__dirname, 'db.json');
 const LOG_FILE = path.join(__dirname, 'payments.log');
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // Initialize "database"
 if (!fs.existsSync(DB_FILE)) {
@@ -89,6 +93,51 @@ async function startServer() {
     
     const { password: _, ...userWithoutPassword } = user;
     res.json({ token, user: userWithoutPassword });
+  });
+
+  // Auth: Google Login/Signup
+  app.post('/api/auth/google', async (req, res) => {
+    const { credential } = req.body;
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ error: 'GOOGLE_CLIENT_ID not configured on server' });
+    }
+
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) throw new Error('Invalid Google Token');
+
+      const { email, name, picture, sub: googleId } = payload;
+      const dbData = getDB();
+      let user = dbData.users.find((u: any) => u.email === email);
+
+      if (!user) {
+        // Auto-register new Google user
+        user = {
+          id: Date.now().toString(),
+          email,
+          name: name || email,
+          password: 'google-auth-no-password',
+          role: 'user',
+          isApproved: false, // Still needs approval
+          subscribedUntil: null,
+          createdAt: new Date().toISOString(),
+          googleId
+        };
+        dbData.users.push(user);
+        saveDB(dbData);
+      }
+
+      const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ token, user: userWithoutPassword });
+    } catch (err) {
+      console.error('Google Auth Error:', err);
+      res.status(401).json({ error: 'Xác thực Google thất bại' });
+    }
   });
 
   // Payments: Process (Simulated)

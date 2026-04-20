@@ -19,6 +19,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
@@ -41,5 +42,3 @@
     "vite": "^6.2.0"
   }
 }
-npm install
-npm run dev

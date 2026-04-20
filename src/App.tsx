@@ -110,6 +110,53 @@ export default function App() {
 
   // --- Auth Handlers ---
 
+  const handleGoogleLogin = async (response: any) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Google Auth Failed on Server');
+      }
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+
+      localStorage.setItem('token', result.token);
+      localStorage.setItem('user', JSON.stringify(result.user));
+      setToken(result.token);
+      setCurrentUser(result.user);
+      setView('app');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    /* global google */
+    if (view === 'login' && !currentUser) {
+      const gClient = (window as any).google;
+      if (gClient) {
+        gClient.accounts.id.initialize({
+          client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || '', // Casting to any for TS
+          callback: handleGoogleLogin,
+        });
+        gClient.accounts.id.renderButton(
+          document.getElementById('google-login-btn'),
+          { theme: 'outline', size: 'large', width: '100%' }
+        );
+      }
+    }
+  }, [view, currentUser]);
+
   const onLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -272,6 +319,14 @@ export default function App() {
                     {error && <p className="text-red-500 text-sm bg-red-500/10 p-2 rounded border border-red-500/20">{error}</p>}
                     <Button type="submit" className="w-full" isLoading={isLoading}>Đăng nhập</Button>
                  </form>
+
+                 <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-800"></span></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-zinc-900 px-2 text-zinc-500">Hoặc</span></div>
+                 </div>
+
+                 <div id="google-login-btn" className="w-full"></div>
+
                  <div className="mt-6 text-center text-sm text-zinc-500">
                     Chưa có tài khoản? <button onClick={() => setView('register')} className="text-red-500 hover:underline">Đăng ký ngay</button>
                  </div>

@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "id": "admin",
+      "email": "admin@vantheweb.com",
+      "password": "$2b$10$dPzsI1.Lh1Y6kbEnShhn/.w0XhECEZ9Tg9iJ8FqLRSomw0QmlYsiG",
+      "name": "Admin Vanthewweb",
+      "role": "admin",
+      "isApproved": true,
+      "subscribedUntil": "2099-12-31T23:59:59.999Z",
+      "createdAt": "2026-04-20T08:00:00.000Z"
+    }
+  ]
+}
